@@ -30,12 +30,23 @@ class BooksController < Grape::API
 
     desc 'Create new book'
     params do
-      requires :title, type: String, desc: 'Title of a book.'
-      requires :description, type: String, desc: 'Description of a book.'
-      requires :page_count, type: Integer, desc: 'Page count of a book.'
+      requires :book, type: Hash, desc: 'Your book.' do
+        requires :title, type: String, desc: 'Title of a book.'
+        optional :description, type: String, desc: 'Description of a book.'
+        optional :page_count, type: Integer, desc: 'Page count of a book.'
+      end
+      requires :publisher, type: Hash, desc: 'Book publisher' do
+        requires :name, type: String, desc: 'Publisher name'
+      end
+      optional :categories, type: Array, desc: 'List of categories.',
+               documentation: {param_type: 'body'} do
+      end
     end
     post '/' do
-      Book.create!(title: params[:title], description: params[:description], page_count: params[:page_count])
+      categories = []
+      params[:categories]&.each { |c| categories << Category.find_or_create_by(name: c) }
+      publisher = Publisher.find_or_create_by!(params[:publisher])
+      Book.create!(params[:book].merge(publisher: publisher, category_ids: categories.collect(&:id)))
     end
 
     desc 'Update a book.'
